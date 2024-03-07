@@ -1,0 +1,6 @@
+*.jpg
+data/
+models/
+*.pkl
+app.py
+.ipynb_checkpoints/
