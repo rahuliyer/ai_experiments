@@ -195,5 +195,18 @@ class TestGameStateFunctions(unittest.TestCase):
         self.assertEqual(other_count, 0)
 
 
+    def test_get_destinations(self):
+        res = json.loads(get_destinations(self.case_id))
+        dests = res["destinations"]
+
+        self.assertEqual(res["city"], "Chennai")
+        self.assertIn("Cairo", dests)
+        self.assertIn("Tokyo", dests)
+        self.assertNotIn("Sydney", dests)
+        self.assertNotIn("Paris", dests)
+        self.assertNotIn("Rome", dests)
+        self.assertNotIn("New York", dests)
+
+
 if __name__ == "__main__":
     unittest.main()
