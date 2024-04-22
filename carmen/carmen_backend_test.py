@@ -107,5 +107,93 @@ class TestGameStateFunctions(unittest.TestCase):
         new_game_state = get_game_state(self.case_id)
         self.assertEqual(new_game_state["next_hop"], 77)
 
+    def test_new_game(self):
+        game_state = json.loads(new_game())
+
+        self.assertIn("case_id", game_state)
+        self.assertIn("suspect_name", game_state)
+        self.assertIn("hops", game_state)
+        self.assertEqual(len(game_state["hops"]), 6)
+        self.assertIn("next_hop", game_state)
+        self.assertEqual(game_state["next_hop"], 1)
+
+    def test_generate_destinations(self):
+        dests = json.loads(generate_destinations.invoke(
+            {
+                "previous_city": "London",
+                "next_city": "Mumbai",
+                "current_city": "Tokyo",
+                "exclude_list": "Paris,Lima"
+            }
+        ))["destinations"]
+
+        self.assertEqual(len(dests), 4)
+        self.assertIn("London", dests)
+        self.assertIn("Mumbai", dests)
+        self.assertNotIn("Tokyo", dests)
+        self.assertNotIn("Paris", dests)
+        self.assertNotIn("Lima", dests)
+
+    def test_generate_regular_clues(self):
+        clues = json.loads(generate_regular_clues.invoke(
+            {
+                "city": "Bangalore"
+            }
+        ))["clues"]
+
+        self.assertEqual(len(clues), 3)
+        self.assertIn("location", clues[0])
+        self.assertIn("clue", clues[0])
+        self.assertIn("location", clues[1])
+        self.assertIn("clue", clues[1])
+        self.assertIn("location", clues[2])
+        self.assertIn("clue", clues[2])
+
+    def test_generate_mistaken_clues(self):
+        clues = json.loads(generate_mistaken_clues.invoke({}))["clues"]
+
+        self.assertEqual(len(clues), 3)
+        self.assertIn("location", clues[0])
+        self.assertIn("clue", clues[0])
+        self.assertEqual(clues[0]["clue"], "No one with the suspect's description was seen here")
+        self.assertIn("location", clues[1])
+        self.assertIn("clue", clues[1])
+        self.assertEqual(clues[1]["clue"], "No one with the suspect's description was seen here")
+        self.assertIn("location", clues[2])
+        self.assertIn("clue", clues[2])
+        self.assertEqual(clues[2]["clue"], "No one with the suspect's description was seen here")
+
+    def test_generate_arrest_clues(self):
+        suspect_name = "Bobo the Clown"
+        clues = json.loads(generate_arrest_clues.invoke(
+            {
+                "suspect_name": suspect_name
+            }
+        ))["clues"]
+
+        self.assertEqual(len(clues), 3)
+        self.assertIn("location", clues[0])
+        self.assertIn("clue", clues[0])
+        self.assertIn("location", clues[1])
+        self.assertIn("clue", clues[1])
+        self.assertIn("location", clues[2])
+        self.assertIn("clue", clues[2])
+
+        watch_out_count = 0
+        arrest_count = 0
+        other_count = 0
+        for i in range(0,3):
+            if clues[i]["clue"] == "Watch your step. You are getting close":
+                watch_out_count += 1
+            elif clues[i]["clue"] == f"Congratulations! You have arrested the suspect, {suspect_name}":
+                arrest_count += 1
+            else:
+                other_count += 1
+
+        self.assertEqual(watch_out_count, 2)
+        self.assertEqual(arrest_count, 1)
+        self.assertEqual(other_count, 0)
+
+
 if __name__ == "__main__":
     unittest.main()
