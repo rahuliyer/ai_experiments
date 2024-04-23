@@ -217,6 +217,21 @@ class CarmenBackendTest(unittest.TestCase):
         self.assertNotIn("Rome", dests)
         self.assertNotIn("New York", dests)
 
+    def test_get_destinations_last_city(self):
+        update_game_state.invoke(
+            {
+                "case_id": self.case_id,
+                "key": "next_hop",
+                "value": MAX_HOPS + 1
+            },
+        )
+
+        res = get_destinations(self.case_id)
+        dests = res["destinations"]
+
+        self.assertEqual(res["city"], "Chennai")
+        self.assertEqual(len(dests), 0)
+
     def test_get_clues_wrong_city(self):
         clues = get_clues(self.case_id)["clues"]
 
