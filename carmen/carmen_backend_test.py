@@ -4,7 +4,7 @@ import json
 
 from carmen_backend import *
 
-class TestGameStateFunctions(unittest.TestCase):
+class CarmenBackendTest(unittest.TestCase):
     GAME_STATES = {
         "8d354a22-4ee1-4eb5-a594-aa6a60a2d6c5": {
             "case_id": "8d354a22-4ee1-4eb5-a594-aa6a60a2d6c5",
@@ -107,8 +107,8 @@ class TestGameStateFunctions(unittest.TestCase):
         new_game_state = get_game_state(self.case_id)
         self.assertEqual(new_game_state["next_hop"], 77)
 
-    def test_new_game(self):
-        game_state = json.loads(new_game())
+    def test_generate_new_game(self):
+        game_state = json.loads(generate_new_game())
 
         self.assertIn("case_id", game_state)
         self.assertIn("suspect_name", game_state)
@@ -194,9 +194,19 @@ class TestGameStateFunctions(unittest.TestCase):
         self.assertEqual(arrest_count, 1)
         self.assertEqual(other_count, 0)
 
+    def test_new_game(self):
+        res = new_game()
+
+        game_states = get_game_states()
+
+        print(res)
+        self.assertIn(res["case_id"], game_states)
+
+        self.assertIn("case_id", res)
+        self.assertIn("suspect_name", res)
 
     def test_get_destinations(self):
-        res = json.loads(get_destinations(self.case_id))
+        res = get_destinations(self.case_id)
         dests = res["destinations"]
 
         self.assertEqual(res["city"], "Chennai")
@@ -208,7 +218,7 @@ class TestGameStateFunctions(unittest.TestCase):
         self.assertNotIn("New York", dests)
 
     def test_get_clues_wrong_city(self):
-        clues = json.loads(get_clues(self.case_id))["clues"]
+        clues = get_clues(self.case_id)["clues"]
 
         self.assertEqual(len(clues), 3)
         self.assertEqual(clues[0]["clue"], "No one with the suspect's description was seen here")
@@ -221,7 +231,7 @@ class TestGameStateFunctions(unittest.TestCase):
             },
         )
 
-        clues = json.loads(get_clues(self.case_id))["clues"]
+        clues = get_clues(self.case_id)["clues"]
 
         suspect_name = self.game_states[self.case_id]["suspect_name"]
         self.assertEqual(len(clues), 3)
@@ -241,11 +251,11 @@ class TestGameStateFunctions(unittest.TestCase):
             {
                 "case_id": self.case_id,
                 "key": "next_hop",
-                "value": 5
+                "value": MAX_HOPS + 1
             },
         )
 
-        clues = json.loads(get_clues(self.case_id))["clues"]
+        clues = get_clues(self.case_id)["clues"]
 
         suspect_name = self.game_states[self.case_id]["suspect_name"]
         self.assertEqual(len(clues), 3)
@@ -258,7 +268,7 @@ class TestGameStateFunctions(unittest.TestCase):
         )
 
     def test_travel_wrong_city(self):
-        res = json.loads(travel(self.case_id, "Bangalore"))
+        res = travel(self.case_id, "Bangalore")
 
         self.assertEqual(res["current_city"], "Bangalore")
 
@@ -271,7 +281,7 @@ class TestGameStateFunctions(unittest.TestCase):
             self.game_states[self.case_id]["next_hop"])
 
     def test_travel_back_to_correct_city(self):
-        res = json.loads(travel(self.case_id, "Cairo"))
+        res = travel(self.case_id, "Cairo")
 
         self.assertEqual(res["current_city"], "Cairo")
 
@@ -291,7 +301,7 @@ class TestGameStateFunctions(unittest.TestCase):
             },
         )
 
-        res = json.loads(travel(self.case_id, "Tokyo"))
+        res = travel(self.case_id, "Tokyo")
 
         self.assertEqual(res["current_city"], "Tokyo")
 
@@ -304,7 +314,7 @@ class TestGameStateFunctions(unittest.TestCase):
             self.game_states[self.case_id]["next_hop"] + 1)
 
     def test_travel_to_future_city(self):
-        res = json.loads(travel(self.case_id, "New York"))
+        res = travel(self.case_id, "New York")
 
         self.assertEqual(res["error"], "You cannot travel to that city")
 
