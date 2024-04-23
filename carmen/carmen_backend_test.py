@@ -207,6 +207,55 @@ class TestGameStateFunctions(unittest.TestCase):
         self.assertNotIn("Rome", dests)
         self.assertNotIn("New York", dests)
 
+    def test_get_clues_wrong_city(self):
+        clues = json.loads(get_clues(self.case_id))["clues"]
+
+        self.assertEqual(len(clues), 3)
+        self.assertEqual(clues[0]["clue"], "No one with the suspect's description was seen here")
+
+    def test_get_clues_right_city(self):
+        set_current_city.invoke(
+            {
+                "case_id": self.case_id,
+                "current_city": "Cairo"
+            },
+        )
+
+        clues = json.loads(get_clues(self.case_id))["clues"]
+
+        suspect_name = self.game_states[self.case_id]["suspect_name"]
+        self.assertEqual(len(clues), 3)
+        self.assertNotEqual(clues[0]["clue"], "No one with the suspect's description was seen here")
+        self.assertNotEqual(clues[0]["clue"], "Watch your step. You are getting close")
+        self.assertNotEqual(clues[0]["clue"], f"Congratulations! You have arrested the suspect, {suspect_name}")
+
+    def test_get_clues_final_city(self):
+        set_current_city.invoke(
+            {
+                "case_id": self.case_id,
+                "current_city": "Sydney"
+            },
+        )
+
+        update_game_state.invoke(
+            {
+                "case_id": self.case_id,
+                "key": "next_hop",
+                "value": 5
+            },
+        )
+
+        clues = json.loads(get_clues(self.case_id))["clues"]
+
+        suspect_name = self.game_states[self.case_id]["suspect_name"]
+        self.assertEqual(len(clues), 3)
+        self.assertIn(
+            clues[0]["clue"],
+            [
+                "Watch your step. You are getting close",
+                f"Congratulations! You have arrested the suspect, {suspect_name}"
+            ]
+        )
 
 if __name__ == "__main__":
     unittest.main()
