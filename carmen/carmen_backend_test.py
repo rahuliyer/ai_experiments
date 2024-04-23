@@ -257,5 +257,64 @@ class TestGameStateFunctions(unittest.TestCase):
             ]
         )
 
+    def test_travel_wrong_city(self):
+        res = json.loads(travel(self.case_id, "Bangalore"))
+
+        self.assertEqual(res["current_city"], "Bangalore")
+
+        gs = get_game_state(self.case_id)
+
+        self.assertEqual(gs["current_city"], "Bangalore")
+
+        self.assertEqual(
+            gs["next_hop"],
+            self.game_states[self.case_id]["next_hop"])
+
+    def test_travel_back_to_correct_city(self):
+        res = json.loads(travel(self.case_id, "Cairo"))
+
+        self.assertEqual(res["current_city"], "Cairo")
+
+        gs = get_game_state(self.case_id)
+
+        self.assertEqual(gs["current_city"], "Cairo")
+
+        self.assertEqual(
+            gs["next_hop"],
+            self.game_states[self.case_id]["next_hop"])
+
+    def test_travel_to_correct_next_city(self):
+        set_current_city.invoke(
+            {
+                "case_id": self.case_id,
+                "current_city": "Cairo"
+            },
+        )
+
+        res = json.loads(travel(self.case_id, "Tokyo"))
+
+        self.assertEqual(res["current_city"], "Tokyo")
+
+        gs = get_game_state(self.case_id)
+
+        self.assertEqual(gs["current_city"], "Tokyo")
+
+        self.assertEqual(
+            gs["next_hop"],
+            self.game_states[self.case_id]["next_hop"] + 1)
+
+    def test_travel_to_future_city(self):
+        res = json.loads(travel(self.case_id, "New York"))
+
+        self.assertEqual(res["error"], "You cannot travel to that city")
+
+        gs = get_game_state(self.case_id)
+
+        self.assertEqual(gs["current_city"], "Chennai")
+
+        self.assertEqual(
+            gs["next_hop"],
+            self.game_states[self.case_id]["next_hop"])
+
 if __name__ == "__main__":
     unittest.main()
