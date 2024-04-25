@@ -31,7 +31,7 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 models = {
     "openai": {
         "generation": "gpt-3.5-turbo",
-        "agent": "gpt-3.5-turbo"
+        "agent": "gpt-4"
     },
     "anthropic": {
         "generation": "claude-3-sonnet-20240229",
