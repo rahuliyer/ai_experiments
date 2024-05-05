@@ -5,74 +5,64 @@ import json
 from carmen_backend import *
 
 class CarmenBackendTest(unittest.TestCase):
-    GAME_STATES = {
-        "8d354a22-4ee1-4eb5-a594-aa6a60a2d6c5": {
-            "case_id": "8d354a22-4ee1-4eb5-a594-aa6a60a2d6c5",
-            "suspect_name": "Picasso Peculiar",
-            "current_city": "Chennai",
-            "stolen_item": "The Louvre's Laughing Mona Lisa",
-            "hops": [
-                "Paris",
-                "Rome",
-                "Cairo",
-                "Tokyo",
-                "New York",
-                "Sydney"
-            ],
-            "next_hop": 3
-        }
+    GAME_STATE = {
+        "case_id": "8d354a22-4ee1-4eb5-a594-aa6a60a2d6c5",
+        "suspect_name": "Picasso Peculiar",
+        "current_city": "Chennai",
+        "stolen_item": "The Louvre's Laughing Mona Lisa",
+        "hops": [
+            "Paris",
+            "Rome",
+            "Cairo",
+            "Tokyo",
+            "New York",
+            "Sydney"
+        ],
+        "next_hop": 3
     }
 
     @classmethod
-    def remove_game_state_file(cls):
-        if os.path.exists(GAME_STATE_FILE):
-            os.remove(GAME_STATE_FILE)
-
-    @classmethod
     def setUpClass(cls):
-        cls.remove_game_state_file()
+        os.environ["GAME_ENVIRONMENT"] = "TEST"
 
+        clear_game_states()
         cls.maxDiff = None
 
     @classmethod
     def tearDownClass(cls):
-        cls.remove_game_state_file()
+        clear_game_states()
 
 
     def setUp(self):
-        with open(GAME_STATE_FILE, "w") as f:
-            json.dump(self.GAME_STATES, f)
-
-        self.game_states = self.GAME_STATES
-        self.case_id, _ = next(iter(self.game_states.items()))
+        store_game_state(self.GAME_STATE)
+        self.game_state = self.GAME_STATE.copy()
+        self.case_id = self.game_state["case_id"]
 
     def tearDown(self):
-        self.remove_game_state_file()
+        clear_game_states()
+        self.game_state = None
 
 
-    def test_missing_file_returns_empty_dict(self):
-        os.remove(GAME_STATE_FILE)
+    def test_empty_state_returns_empty_dict(self):
+        clear_game_states()
         ret = get_game_states()
 
         self.assertEqual(ret, {})
 
     def test_state_is_loaded_correctly(self):
-        ret = get_game_states()
+        ret = get_game_state(self.case_id)
 
-        self.assertEqual(ret, self.GAME_STATES)
+        self.assertEqual(ret, self.GAME_STATE)
 
     def test_state_is_stored_correctly(self):
+        self.game_state["next_hop"] = 32
 
-        self.game_states[self.case_id]["next_hop"] = 77
+        store_game_state(self.game_state)
 
-        store_game_state(self.game_states[self.case_id])
-
-        self.assertEqual(get_game_states(), self.game_states)
+        self.assertEqual(get_game_state(self.case_id), self.game_state)
 
     def test_get_game_state(self):
-        game_state = self.game_states[self.case_id]
-
-        self.assertEqual(get_game_state(self.case_id), game_state)
+        self.assertEqual(get_game_state(self.case_id), self.game_state)
 
     def test_fetch_game_state_tool(self):
         self.assertEqual(
@@ -81,7 +71,7 @@ class CarmenBackendTest(unittest.TestCase):
                     "case_id": self.case_id
                 }
             ),
-            json.dumps(self.game_states[self.case_id])
+            json.dumps(self.game_state)
         )
 
     def test_set_current_city_tool(self):
@@ -100,12 +90,12 @@ class CarmenBackendTest(unittest.TestCase):
             {
                 "case_id": self.case_id,
                 "key": "next_hop",
-                "value": 77
+                "value": 46
             },
         )
 
         new_game_state = get_game_state(self.case_id)
-        self.assertEqual(new_game_state["next_hop"], 77)
+        self.assertEqual(new_game_state["next_hop"], 46)
 
     def test_generate_new_game(self):
         game_state = json.loads(generate_new_game())
@@ -118,14 +108,16 @@ class CarmenBackendTest(unittest.TestCase):
         self.assertEqual(game_state["next_hop"], 1)
 
     def test_generate_destinations(self):
-        dests = json.loads(generate_destinations.invoke(
+        dests_json = generate_destinations.invoke(
             {
                 "previous_city": "London",
                 "next_city": "Mumbai",
                 "current_city": "Tokyo",
                 "exclude_list": "Paris,Lima"
             }
-        ))["destinations"]
+        )
+
+        dests = json.loads(dests_json)["destinations"]
 
         self.assertEqual(len(dests), 4)
         self.assertIn("London", dests)
@@ -199,7 +191,6 @@ class CarmenBackendTest(unittest.TestCase):
 
         game_states = get_game_states()
 
-        print(res)
         self.assertIn(res["case_id"], game_states)
 
         self.assertIn("case_id", res)
@@ -248,7 +239,7 @@ class CarmenBackendTest(unittest.TestCase):
 
         clues = get_clues(self.case_id)["clues"]
 
-        suspect_name = self.game_states[self.case_id]["suspect_name"]
+        suspect_name = self.game_state["suspect_name"]
         self.assertEqual(len(clues), 3)
         self.assertNotEqual(clues[0]["clue"], "No one with the suspect's description was seen here")
         self.assertNotEqual(clues[0]["clue"], "Watch your step. You are getting close")
@@ -272,7 +263,7 @@ class CarmenBackendTest(unittest.TestCase):
 
         clues = get_clues(self.case_id)["clues"]
 
-        suspect_name = self.game_states[self.case_id]["suspect_name"]
+        suspect_name = self.game_state["suspect_name"]
         self.assertEqual(len(clues), 3)
         self.assertIn(
             clues[0]["clue"],
@@ -293,7 +284,7 @@ class CarmenBackendTest(unittest.TestCase):
 
         self.assertEqual(
             gs["next_hop"],
-            self.game_states[self.case_id]["next_hop"])
+            self.game_state["next_hop"])
 
     def test_travel_back_to_correct_city(self):
         res = travel(self.case_id, "Cairo")
@@ -306,7 +297,7 @@ class CarmenBackendTest(unittest.TestCase):
 
         self.assertEqual(
             gs["next_hop"],
-            self.game_states[self.case_id]["next_hop"])
+            self.game_state["next_hop"])
 
     def test_travel_to_correct_next_city(self):
         set_current_city.invoke(
@@ -326,7 +317,7 @@ class CarmenBackendTest(unittest.TestCase):
 
         self.assertEqual(
             gs["next_hop"],
-            self.game_states[self.case_id]["next_hop"] + 1)
+            self.game_state["next_hop"] + 1)
 
     def test_travel_to_future_city(self):
         res = travel(self.case_id, "New York")
@@ -339,7 +330,7 @@ class CarmenBackendTest(unittest.TestCase):
 
         self.assertEqual(
             gs["next_hop"],
-            self.game_states[self.case_id]["next_hop"])
+            self.game_state["next_hop"])
 
 if __name__ == "__main__":
     unittest.main()
